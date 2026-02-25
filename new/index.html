@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI团队协作系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-all-300 {
+                transition: all 0.3s ease;
+            }
+            .shadow-card {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .bg-gradient-blue {
+                background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+            }
+        }
+    </style>
+    <style>
+        /* 阶段步骤样式 */
+        .stage-step {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #3b82f6;
+            transition: all 0.3s ease;
+        }
+        .stage-step.active {
+            background-color: #dbeafe;
+            border-left-color: #3b82f6;
+        }
+        .stage-step.completed {
+            background-color: #dcfce7;
+            border-left-color: #10b981;
+        }
+        .stage-step.error {
+            background-color: #fee2e2;
+            border-left-color: #ef4444;
+        }
+        
+        /* 加载动画 */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .spinner-border {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            vertical-align: text-bottom;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+        
+        /* 徽章样式 */
+        .badge {
+            display: inline-block;
+            padding: 0.25em 0.4em;
+            font-size: 75%;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.375rem;
+        }
+        .badge.bg-secondary {
+            color: #fff;
+            background-color: #6c757d;
+        }
+        .badge.bg-primary {
+            color: #fff;
+            background-color: #3b82f6;
+        }
+        .badge.bg-success {
+            color: #fff;
+            background-color: #10b981;
+        }
+        .badge.bg-warning {
+            color: #000;
+            background-color: #f59e0b;
+        }
+        .badge.bg-danger {
+            color: #fff;
+            background-color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-rocket text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">AI团队协作系统</h1>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <section class="py-8 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6">
+                <!-- 左侧：需求提交 -->
+                <div class="lg:w-1/3 bg-white p-6 rounded-lg shadow-card">
+                    <h3 class="text-2xl font-bold mb-4 text-gray-800">需求提交</h3>
+                    <form id="requirement-form" class="space-y-4">
+                        <div>
+                            <label for="requirement" class="block text-gray-700 font-medium mb-2">需求描述</label>
+                            <textarea id="requirement" name="requirement" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" placeholder="请详细描述您的需求，例如：开发一个电商网站"></textarea>
+                        </div>
+                        <div>
+                            <label for="agent-count" class="block text-gray-700 font-medium mb-2">AI团队成员数量</label>
+                            <input type="number" id="agent-count" name="agent_count" min="1" max="5" value="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary">
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-6 rounded-lg hover:bg-primary/90 transition-all-300">
+                            <i class="fa fa-paper-plane mr-2"></i> 提交需求
+                        </button>
+                    </form>
+                    <div id="loading" class="mt-4 hidden">
+                        <div class="flex items-center justify-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            <span class="ml-2 text-gray-600">处理中...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：结果展示 -->
+                <div class="lg:w-2/3 space-y-6">
+                    <!-- 程序运行阶段展示栏 -->
+                    <div id="stage-section" class="bg-white p-6 rounded-lg shadow-card">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+                            <i class="fa fa-sync-alt text-primary mr-2"></i> 任务执行阶段
+                        </h3>
+                        <div id="process-stage" class="p-3 bg-gray-50 rounded-lg mb-4">
+                            <div class="flex items-center">
+                                <div class="spinner-border text-primary me-3" role="status" id="process-spinner"></div>
+                                <span id="stage-message">就绪：等待处理需求</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 详细步骤展示 -->
+                        <div id="stage-steps" class="space-y-3">
+                            <div class="stage-step" id="step-1">
+                                <div class="flex justify-between items-center">
+                                    <h6 class="font-semibold flex items-center">
+                                        <i class="fa fa-user-plus text-primary mr-2"></i>
+                                        步骤1：分析需求，创建团队
+                                    </h6>
+                                    <span class="badge bg-secondary">待处理</span>
+                                </div>
+                                <p id="step-1-message" class="mt-2 text-gray-600 text-sm">根据需求分析，创建合适的AI团队</p>
+                            </div>
+                            <div class="stage-step" id="step-2">
+                                <div class="flex justify-between items-center">
+                                    <h6 class="font-semibold flex items-center">
+                                        <i class="fa fa-comments text-primary mr-2"></i>
+                                        步骤2：团队讨论
+                                    </h6>
+                                    <span class="badge bg-secondary">待处理</span>
+                                </div>
+                                <p id="step-2-message" class="mt-2 text-gray-600 text-sm">团队成员围绕需求进行多轮讨论</p>
+                            </div>
+                            <div class="stage-step" id="step-3">
+                                <div class="flex justify-between items-center">
+                                    <h6 class="font-semibold flex items-center">
+                                        <i class="fa fa-check-circle text-primary mr-2"></i>
+                                        步骤3：达成共识
+                                    </h6>
+                                    <span class="badge bg-secondary">待处理</span>
+                                </div>
+                                <p id="step-3-message" class="mt-2 text-gray-600 text-sm">基于讨论结果，形成统一的解决方案</p>
+                            </div>
+                            <div class="stage-step" id="step-4">
+                                <div class="flex justify-between items-center">
+                                    <h6 class="font-semibold flex items-center">
+                                        <i class="fa fa-tasks text-primary mr-2"></i>
+                                        步骤4：制定计划
+                                    </h6>
+                                    <span class="badge bg-secondary">待处理</span>
+                                </div>
+                                <p id="step-4-message" class="mt-2 text-gray-600 text-sm">基于共识，制定详细的执行计划</p>
+                            </div>
+                            <div class="stage-step" id="step-5">
+                                <div class="flex justify-between items-center">
+                                    <h6 class="font-semibold flex items-center">
+                                        <i class="fa fa-user-tag text-primary mr-2"></i>
+                                        步骤5：分配任务
+                                    </h6>
+                                    <span class="badge bg-secondary">待处理</span>
+                                </div>
+                                <p id="step-5-message" class="mt-2 text-gray-600 text-sm">根据团队成员的技能，分配具体任务</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 讨论信息 -->
+                    <div id="discussion-section" class="bg-white p-6 rounded-lg shadow-card">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+                            <i class="fa fa-comments text-primary mr-2"></i> 讨论历史
+                        </h3>
+                        <div id="discussion-info" class="space-y-4 max-h-96 overflow-y-auto">
+                            <!-- 讨论信息将通过JavaScript动态填充 -->
+                        </div>
+                        <div id="consensus-info" class="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <!-- 共识信息将通过JavaScript动态填充 -->
+                        </div>
+                    </div>
+
+                    <!-- 计划信息 -->
+                    <div id="plan-section" class="bg-white p-6 rounded-lg shadow-card">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+                            <i class="fa fa-tasks text-primary mr-2"></i> 执行计划
+                        </h3>
+                        <div id="plan-info" class="space-y-4">
+                            <!-- 计划信息将通过JavaScript动态填充 -->
+                        </div>
+                        <div class="mt-4">
+                            <h4 class="text-lg font-semibold mb-3 text-gray-700">任务进度</h4>
+                            <div id="tasks-container" class="space-y-3 max-h-96 overflow-y-auto">
+                                <!-- 任务列表将通过JavaScript动态填充 -->
+                            </div>
+                        </div>
+                        
+
+                    </div>
+                    
+                    <!-- 执行结果 -->
+                    <div id="execution-result-section" class="bg-white p-6 rounded-lg shadow-card mt-6">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center">
+                            <i class="fa fa-check-circle text-primary mr-2"></i> 执行结果
+                        </h3>
+                        <div id="execution-result-info" class="space-y-4">
+                            <!-- 执行结果将通过JavaScript动态填充 -->
+                            <p class="text-gray-600">暂无执行结果</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-4 mt-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2026 AI团队协作系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // API基础URL
+        const API_BASE_URL = '/api';
+
+        // DOM元素
+        const requirementForm = document.getElementById('requirement-form');
+        const loading = document.getElementById('loading');
+        const stageSection = document.getElementById('stage-section');
+        const discussionSection = document.getElementById('discussion-section');
+        const planSection = document.getElementById('plan-section');
+        const stageMessage = document.getElementById('stage-message');
+        const processSpinner = document.getElementById('process-spinner');
+
+        // 定时刷新相关变量
+        let refreshIntervalId = null;
+        let refreshInterval = 3000; // 默认3秒刷新一次
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 提交需求表单
+            requirementForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitRequirement();
+            });
+
+            // 开始自动刷新
+            startAutoRefresh();
+        });
+
+        // 开始自动刷新
+        function startAutoRefresh() {
+            // 清除之前的定时器
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+            }
+
+            // 开始新的定时器
+            refreshIntervalId = setInterval(getCurrentStatus, refreshInterval);
+
+            // 立即执行一次
+            getCurrentStatus();
+        }
+
+        // 停止自动刷新
+        function stopAutoRefresh() {
+            if (refreshIntervalId) {
+                clearInterval(refreshIntervalId);
+                refreshIntervalId = null;
+            }
+        }
+
+        // 获取当前状态
+        async function getCurrentStatus() {
+            try {
+                // 发送请求
+                const response = await fetch(`${API_BASE_URL}/status`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const status = await response.json();
+
+                // 根据状态更新阶段信息
+                if (status.status === 'processing') {
+                    loading.classList.remove('hidden');
+                } else {
+                    loading.classList.add('hidden');
+                }
+                
+                // 无论什么状态，只要有stage信息就更新阶段状态
+                if (status.stage) {
+                    updateStageStatus(status.stage, status.message || '处理中...');
+                }
+
+                // 显示结果
+                if (status.discussion) {
+                    displayDiscussionInfo(status.discussion);
+                }
+                if (status.plan) {
+                    displayPlanInfo(status.plan);
+                }
+            } catch (error) {
+                console.error('获取状态失败：', error);
+                // 更新阶段为错误状态
+                updateStageStatus('error', `获取状态失败：${error.message}`);
+            }
+        }
+
+        // 提交需求
+        async function submitRequirement() {
+            const requirement = document.getElementById('requirement').value.trim();
+            const agentCount = parseInt(document.getElementById('agent-count').value);
+
+            if (!requirement) {
+                alert('请输入需求描述');
+                return;
+            }
+
+            // 显示加载状态
+            loading.classList.remove('hidden');
+
+            // 更新阶段信息
+            updateStageStatus('analyzing', '分析需求，创建团队...');
+
+            try {
+                // 更新阶段信息为讨论中
+                updateStageStatus('discussing', '团队讨论中...');
+                
+                // 开始讨论后自动刷新
+                startAutoRefresh();
+                
+                // 发送请求
+                const response = await fetch(`${API_BASE_URL}/requirement`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        requirement: requirement,
+                        agent_count: agentCount
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新阶段信息
+                    updateStageStatus('consensus', '达成共识中...');
+                    
+                    // 显示结果
+                    displayDiscussionInfo(result.discussion);
+                    displayPlanInfo(result.plan);
+
+                    // 更新阶段信息
+                    updateStageStatus('planning', '制定执行计划...');
+                    
+                    // 更新阶段信息
+                    updateStageStatus('completed', '任务处理完成');
+                } else {
+                    // 更新阶段信息
+                    updateStageStatus('error', `处理失败：${result.message}`);
+                    alert(`处理失败：${result.message}`);
+                }
+            } catch (error) {
+                // 更新阶段信息
+                updateStageStatus('error', `请求失败：${error.message}`);
+                alert(`请求失败：${error.message}`);
+            } finally {
+                // 隐藏加载状态
+                loading.classList.add('hidden');
+            }
+        }
+
+        // 更新任务阶段状态
+        function updateStageStatus(stage, message) {
+            // 显示阶段信息
+            stageSection.classList.remove('hidden');
+            stageMessage.textContent = message;
+            
+            // 重置所有步骤状态
+            for (let i = 1; i <= 5; i++) {
+                const step = document.getElementById(`step-${i}`);
+                if (step) {
+                    step.classList.remove('active', 'completed', 'error');
+                }
+            }
+            
+            // 根据阶段更新步骤状态
+            switch (stage) {
+                case 'analyzing':
+                    // 步骤1：分析需求，创建团队
+                    updateStepStatus(1, 'active', '分析需求，创建合适的AI团队');
+                    break;
+                case 'discussing':
+                    // 步骤1完成，步骤2进行中
+                    updateStepStatus(1, 'completed', '已创建AI团队');
+                    updateStepStatus(2, 'active', '团队成员围绕需求进行多轮讨论');
+                    break;
+                case 'consensus':
+                    // 步骤2完成，步骤3进行中
+                    updateStepStatus(1, 'completed', '已创建AI团队');
+                    updateStepStatus(2, 'completed', '已完成团队讨论');
+                    updateStepStatus(3, 'active', '基于讨论结果，形成统一的解决方案');
+                    break;
+                case 'planning':
+                    // 步骤3完成，步骤4进行中
+                    updateStepStatus(1, 'completed', '已创建AI团队');
+                    updateStepStatus(2, 'completed', '已完成团队讨论');
+                    updateStepStatus(3, 'completed', '已达成共识');
+                    updateStepStatus(4, 'active', '基于共识，制定详细的执行计划');
+                    break;
+                case 'assigning':
+                    // 步骤4完成，步骤5进行中
+                    updateStepStatus(1, 'completed', '已创建AI团队');
+                    updateStepStatus(2, 'completed', '已完成团队讨论');
+                    updateStepStatus(3, 'completed', '已达成共识');
+                    updateStepStatus(4, 'completed', '已制定执行计划');
+                    updateStepStatus(5, 'active', '根据团队成员的技能，分配具体任务');
+                    break;
+                case 'completed':
+                    // 所有步骤完成
+                    updateStepStatus(1, 'completed', '已创建AI团队');
+                    updateStepStatus(2, 'completed', '已完成团队讨论');
+                    updateStepStatus(3, 'completed', '已达成共识');
+                    updateStepStatus(4, 'completed', '已制定执行计划');
+                    updateStepStatus(5, 'completed', '已分配具体任务');
+                    // 隐藏加载动画
+                    if (processSpinner) {
+                        processSpinner.style.display = 'none';
+                    }
+                    break;
+                case 'error':
+                    // 显示错误状态
+                    for (let i = 1; i <= 5; i++) {
+                        updateStepStatus(i, 'error', '处理过程中出现错误');
+                    }
+                    // 隐藏加载动画
+                    if (processSpinner) {
+                        processSpinner.style.display = 'none';
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // 更新单个步骤状态
+        function updateStepStatus(stepNumber, status, message) {
+            const step = document.getElementById(`step-${stepNumber}`);
+            const stepMessage = document.getElementById(`step-${stepNumber}-message`);
+            const stepBadge = step.querySelector('.badge');
+            
+            if (step) {
+                // 重置状态
+                step.classList.remove('active', 'completed', 'error');
+                
+                // 设置新状态
+                step.classList.add(status);
+                
+                // 更新消息
+                if (stepMessage) {
+                    stepMessage.textContent = message;
+                }
+                
+                // 更新徽章
+                if (stepBadge) {
+                    stepBadge.className = 'badge';
+                    switch (status) {
+                        case 'active':
+                            stepBadge.classList.add('bg-primary');
+                            stepBadge.textContent = '进行中';
+                            break;
+                        case 'completed':
+                            stepBadge.classList.add('bg-success');
+                            stepBadge.textContent = '已完成';
+                            break;
+                        case 'error':
+                            stepBadge.classList.add('bg-danger');
+                            stepBadge.textContent = '错误';
+                            break;
+                        default:
+                            stepBadge.classList.add('bg-secondary');
+                            stepBadge.textContent = '待处理';
+                            break;
+                    }
+                }
+            }
+        }
+
+        // 显示讨论信息
+        function displayDiscussionInfo(discussion) {
+            if (!discussion) return;
+
+            const discussionInfo = document.getElementById('discussion-info');
+            const consensusInfo = document.getElementById('consensus-info');
+            discussionInfo.innerHTML = '';
+            consensusInfo.innerHTML = '';
+
+            // 讨论基本信息
+            const discussionBasic = document.createElement('div');
+            discussionBasic.innerHTML = `
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                    <h4 class="text-lg font-semibold text-gray-800">需求：${discussion.topic}</h4>
+                    <span class="bg-blue-100 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                        ${discussion.current_round} 轮讨论
+                    </span>
+                </div>
+            `;
+            discussionInfo.appendChild(discussionBasic);
+
+            // 讨论消息
+            const messagesList = document.createElement('div');
+            messagesList.classList.add('space-y-4');
+
+            if (discussion.messages) {
+                discussion.messages.forEach(message => {
+                    // 过滤内容，去除思考过程和重复内容
+                    let filteredContent = message.content;
+                    
+                    // 移除常见的思考引导词
+                    filteredContent = filteredContent.replace(/你的回复中不要出现.*?字眼。/g, '');
+                    filteredContent = filteredContent.replace(/首先，用户要求我作为.*?直接发表专业意见。/g, '');
+                    filteredContent = filteredContent.replace(/关键点：.*?。/g, '');
+                    filteredContent = filteredContent.replace(/主要观点概括：.*?。/g, '');
+                    filteredContent = filteredContent.replace(/结构回复：.*?。/g, '');
+                    filteredContent = filteredContent.replace(/保持第一人称：.*?。/g, '');
+                    filteredContent = filteredContent.replace(/最后，确保不解释思考过程；直接给出意见。/g, '');
+                    
+                    // 移除重复的内容
+                    const sentences = filteredContent.split(/[。！？]/).filter(s => s.trim());
+                    const uniqueSentences = [];
+                    const seen = new Set();
+                    
+                    sentences.forEach(sentence => {
+                        const trimmed = sentence.trim();
+                        if (trimmed && !seen.has(trimmed)) {
+                            seen.add(trimmed);
+                            uniqueSentences.push(trimmed);
+                        }
+                    });
+                    
+                    filteredContent = uniqueSentences.join('。') + '。';
+                    
+                    // 限制内容长度，只显示核心部分
+                    if (filteredContent.length > 1000) {
+                        filteredContent = filteredContent.substring(0, 1000) + '...';
+                    }
+                    
+                    const messageCard = document.createElement('div');
+                    messageCard.classList.add('bg-gray-50', 'p-4', 'rounded-lg');
+                    messageCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="font-semibold text-gray-800">${message.agent_name}</h5>
+                            <span class="text-gray-400 text-sm">第 ${message.round} 轮</span>
+                        </div>
+                        <p class="text-gray-600">${filteredContent}</p>
+                    `;
+                    messagesList.appendChild(messageCard);
+                });
+            }
+
+            discussionInfo.appendChild(messagesList);
+
+            // 共识信息
+            if (discussion.consensus) {
+                consensusInfo.innerHTML = `
+                    <h4 class="font-semibold text-gray-800 mb-2">会议摘要</h4>
+                    <p class="text-gray-600">${discussion.consensus.content || discussion.consensus}</p>
+                `;
+            }
+
+            discussionSection.classList.remove('hidden');
+        }
+
+        // 显示计划信息
+        function displayPlanInfo(plan) {
+            if (!plan) return;
+
+            const planInfo = document.getElementById('plan-info');
+            const tasksContainer = document.getElementById('tasks-container');
+            planInfo.innerHTML = '';
+            tasksContainer.innerHTML = '';
+
+            // 计划基本信息
+            const planBasic = document.createElement('div');
+            planBasic.innerHTML = `
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                    <h4 class="text-lg font-semibold text-gray-800">目标：${plan.goal}</h4>
+                    <div class="flex space-x-2">
+                        <button id="edit-goal-btn" class="bg-blue-100 text-primary px-3 py-1 rounded-full text-sm font-medium hover:bg-blue-200">
+                            编辑需求
+                        </button>
+                        <span class="bg-blue-100 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                            ${plan.tasks ? plan.tasks.length : 0} 个任务
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- 需求编辑表单 -->
+                <div id="goal-edit-form" class="bg-gray-50 p-4 rounded-lg mb-4 hidden">
+                    <h5 class="font-semibold text-gray-800 mb-2">修改需求</h5>
+                    <textarea id="goal-input" class="w-full p-2 border border-gray-300 rounded-md" rows="3">${plan.goal}</textarea>
+                    <div class="flex justify-end space-x-2 mt-2">
+                        <button id="cancel-goal-edit" class="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                            取消
+                        </button>
+                        <button id="save-goal-edit" class="px-3 py-1 bg-primary text-white rounded-md hover:bg-primary-dark">
+                            保存
+                        </button>
+                    </div>
+                </div>
+            `;
+            planInfo.appendChild(planBasic);
+
+            // 添加需求编辑事件监听器
+            document.getElementById('edit-goal-btn').addEventListener('click', function() {
+                document.getElementById('goal-edit-form').classList.remove('hidden');
+                // 停止自动刷新
+                stopAutoRefresh();
+            });
+
+            document.getElementById('cancel-goal-edit').addEventListener('click', function() {
+                document.getElementById('goal-edit-form').classList.add('hidden');
+                // 恢复自动刷新
+                startAutoRefresh();
+            });
+
+            document.getElementById('save-goal-edit').addEventListener('click', async function() {
+                const newGoal = document.getElementById('goal-input').value.trim();
+                if (newGoal) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/update-goal`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ goal: newGoal })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            alert('需求修改成功');
+                            document.getElementById('goal-edit-form').classList.add('hidden');
+                            // 恢复自动刷新
+                            startAutoRefresh();
+                            getCurrentStatus();
+                        } else {
+                            alert('需求修改失败：' + result.message);
+                        }
+                    } catch (error) {
+                        alert('需求修改失败：' + error.message);
+                    }
+                }
+            });
+
+            // 任务列表
+            if (plan.tasks) {
+                // 保存选择状态
+                const selectedTaskIds = new Set();
+                // 恢复之前的选择状态
+                if (window.selectedTasks) {
+                    window.selectedTasks.forEach(taskId => {
+                        selectedTaskIds.add(taskId);
+                    });
+                }
+                
+                plan.tasks.forEach((task, index) => {
+                    const taskCard = document.createElement('div');
+                    taskCard.classList.add('bg-gray-50', 'p-4', 'rounded-lg');
+                    // 检查任务是否被选中
+                    const isSelected = selectedTaskIds.has(task.id);
+                    taskCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2 flex-1">
+                                <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isSelected ? 'checked' : ''} />
+                                <h5 class="font-semibold text-gray-800 flex-1">${task.description}</h5>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                                    ${task.assignee_name}
+                                </span>
+                                <button class="edit-task-btn bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs hover:bg-yellow-200" data-task-id="${task.id}">
+                                    编辑
+                                </button>
+                            </div>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-primary h-2.5 rounded-full" style="width: ${task.progress || 0}%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1 text-xs text-gray-500">
+                            <span>进度</span>
+                            <span>${task.progress || 0}%</span>
+                        </div>
+                        
+                        <!-- 任务编辑表单 -->
+                        <div class="task-edit-form mt-3 p-3 bg-white border border-gray-200 rounded-md hidden">
+                            <div class="mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">任务描述</label>
+                                <input type="text" class="task-description-input w-full p-2 border border-gray-300 rounded-md" value="${task.description}" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">负责人</label>
+                                <input type="text" class="task-assignee-input w-full p-2 border border-gray-300 rounded-md" value="${task.assignee_name}" />
+                            </div>
+                            <div class="flex justify-end space-x-2">
+                                <button class="cancel-task-edit px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 text-sm">
+                                    取消
+                                </button>
+                                <button class="save-task-edit px-3 py-1 bg-primary text-white rounded-md hover:bg-primary-dark text-sm" data-task-id="${task.id}">
+                                    保存
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    tasksContainer.appendChild(taskCard);
+                });
+            }
+            
+            // 添加任务选择事件监听器
+            document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    // 保存选择状态
+                    if (!window.selectedTasks) {
+                        window.selectedTasks = [];
+                    }
+                    const taskId = this.getAttribute('data-task-id');
+                    if (this.checked) {
+                        if (!window.selectedTasks.includes(taskId)) {
+                            window.selectedTasks.push(taskId);
+                        }
+                    } else {
+                        window.selectedTasks = window.selectedTasks.filter(id => id !== taskId);
+                    }
+                });
+            });
+
+            // 添加任务编辑事件监听器
+            document.querySelectorAll('.edit-task-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const editForm = this.closest('.bg-gray-50').querySelector('.task-edit-form');
+                    editForm.classList.toggle('hidden');
+                    // 如果编辑表单打开，停止自动刷新
+                    if (!editForm.classList.contains('hidden')) {
+                        stopAutoRefresh();
+                    } else {
+                        // 如果编辑表单关闭，恢复自动刷新
+                        startAutoRefresh();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.cancel-task-edit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const editForm = this.closest('.task-edit-form');
+                    editForm.classList.add('hidden');
+                    // 恢复自动刷新
+                    startAutoRefresh();
+                });
+            });
+
+            document.querySelectorAll('.save-task-edit').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const taskId = this.getAttribute('data-task-id');
+                    const taskCard = this.closest('.bg-gray-50');
+                    const descriptionInput = taskCard.querySelector('.task-description-input');
+                    const assigneeInput = taskCard.querySelector('.task-assignee-input');
+                    const newDescription = descriptionInput.value.trim();
+                    const newAssignee = assigneeInput.value.trim();
+
+                    if (newDescription && newAssignee) {
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/update-task`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    task_id: taskId,
+                                    description: newDescription,
+                                    assignee_name: newAssignee
+                                })
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                alert('任务修改成功');
+                                const editForm = this.closest('.task-edit-form');
+                                editForm.classList.add('hidden');
+                                // 恢复自动刷新
+                                startAutoRefresh();
+                                getCurrentStatus();
+                            } else {
+                                alert('任务修改失败：' + result.message);
+                            }
+                        } catch (error) {
+                            alert('任务修改失败：' + error.message);
+                        }
+                    }
+                });
+            });
+
+            // 添加操作按钮
+            const actionButtons = document.createElement('div');
+            actionButtons.classList.add('flex', 'justify-center', 'space-x-4', 'mt-6');
+            actionButtons.innerHTML = `
+                <button id="start-execution-btn" class="bg-green-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-600">
+                    开始执行
+                </button>
+                <button id="reexecute-btn" class="bg-purple-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-600">
+                    重新执行
+                </button>
+            `;
+            planInfo.appendChild(actionButtons);
+
+            // 添加开始执行事件监听器
+            document.getElementById('start-execution-btn').addEventListener('click', async function() {
+                const selectedTaskIds = [];
+                document.querySelectorAll('.task-checkbox:checked').forEach(checkbox => {
+                    selectedTaskIds.push(checkbox.getAttribute('data-task-id'));
+                });
+
+                if (selectedTaskIds.length === 0) {
+                    alert('请至少选择一个任务');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/execute-tasks`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ task_ids: selectedTaskIds })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('任务执行开始');
+                        // 开始轮询执行状态
+                        startExecutionPolling();
+                    } else {
+                        alert('任务执行失败：' + result.message);
+                    }
+                } catch (error) {
+                    alert('任务执行失败：' + error.message);
+                }
+            });
+
+            // 添加重新执行事件监听器
+            document.getElementById('reexecute-btn').addEventListener('click', async function() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/reexecute-plan`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('重新执行开始');
+                        // 开始轮询执行状态
+                        startExecutionPolling();
+                    } else {
+                        alert('重新执行失败：' + result.message);
+                    }
+                } catch (error) {
+                    alert('重新执行失败：' + error.message);
+                }
+            });
+
+            planSection.classList.remove('hidden');
+        }
+
+        // 开始轮询执行状态
+        function startExecutionPolling() {
+            const pollingInterval = setInterval(async function() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/execution-status`);
+                    const status = await response.json();
+                    if (status.status === 'completed' || status.status === 'error') {
+                        clearInterval(pollingInterval);
+                        alert(status.message || '执行完成');
+                        getCurrentStatus();
+                        // 显示执行结果
+                        displayExecutionResult(status);
+                    }
+                } catch (error) {
+                    clearInterval(pollingInterval);
+                    console.error('获取执行状态失败：', error);
+                }
+            }, 3000);
+        }
+        
+        // 显示执行结果
+        function displayExecutionResult(result) {
+            if (!result) return;
+
+            const resultInfo = document.getElementById('execution-result-info');
+            resultInfo.innerHTML = '';
+
+            // 执行结果基本信息
+            const resultBasic = document.createElement('div');
+            resultBasic.innerHTML = `
+                <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
+                    <h4 class="text-lg font-semibold text-gray-800">执行结果</h4>
+                    <span class="badge ${result.status === 'completed' ? 'bg-success' : 'bg-danger'}">
+                        ${result.status === 'completed' ? '成功' : '失败'}
+                    </span>
+                </div>
+            `;
+            resultInfo.appendChild(resultBasic);
+
+            // 总agent最终反馈
+            if (result.final_feedback) {
+                const finalFeedback = document.createElement('div');
+                finalFeedback.innerHTML = `
+                    <div class="mb-6">
+                        <h5 class="font-semibold text-gray-700 mb-2">总agent反馈</h5>
+                        <div class="bg-gray-50 p-4 rounded-lg border-l-4 border-primary">
+                            <p class="text-gray-600">${result.final_feedback}</p>
+                        </div>
+                    </div>
+                `;
+                resultInfo.appendChild(finalFeedback);
+            } else {
+                // 普通执行结果
+                const normalResult = document.createElement('div');
+                normalResult.innerHTML = `
+                    <div class="mb-4">
+                        <p class="text-gray-600">${result.message || '执行完成'}</p>
+                    </div>
+                `;
+                resultInfo.appendChild(normalResult);
+            }
+
+            // 执行详情
+            if (result.completed_tasks !== undefined && result.total_tasks !== undefined) {
+                const resultDetail = document.createElement('div');
+                resultDetail.innerHTML = `
+                    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                        <h5 class="font-semibold text-gray-800 mb-2">执行详情</h5>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-600">已完成任务</span>
+                            <span class="font-semibold">${result.completed_tasks}/${result.total_tasks}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-primary h-2.5 rounded-full" style="width: ${result.total_tasks > 0 ? (result.completed_tasks / result.total_tasks) * 100 : 0}%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1 text-xs text-gray-500">
+                            <span>进度</span>
+                            <span>${result.total_tasks > 0 ? Math.round((result.completed_tasks / result.total_tasks) * 100) : 0}%</span>
+                        </div>
+                    </div>
+                `;
+                resultInfo.appendChild(resultDetail);
+            }
+
+            // 子任务执行结果
+            if (result.task_results && result.task_results.length > 0) {
+                const taskResults = document.createElement('div');
+                let taskResultsHtml = `
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h5 class="font-semibold text-gray-800 mb-3">子任务执行结果</h5>
+                        <div class="space-y-3">
+                `;
+                
+                result.task_results.forEach(task => {
+                    taskResultsHtml += `
+                        <div class="p-3 bg-white border border-gray-200 rounded-md">
+                            <div class="flex justify-between items-center mb-2">
+                                <h6 class="font-semibold text-gray-700">${task.description}</h6>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                    ${task.assignee}
+                                </span>
+                            </div>
+                            <p class="text-gray-600 text-sm">${task.result}</p>
+                        </div>
+                    `;
+                });
+                
+                taskResultsHtml += `
+                        </div>
+                    </div>
+                `;
+                
+                taskResults.innerHTML = taskResultsHtml;
+                resultInfo.appendChild(taskResults);
+            }
+
+            // 显示执行结果区域
+            document.getElementById('execution-result-section').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
